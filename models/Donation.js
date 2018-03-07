@@ -6,23 +6,42 @@ var Types = keystone.Field.Types;
  * =============
  */
 
-var Donation = new keystone.List('DonationOptions', {
-  label: 'Donation options',
-  map: { name: 'title' },
-  autokey: { path: 'slug', from: 'title', unique: true },
-  sortable: true,
+var Donation = new keystone.List('Donation', {
+  label: 'Donation',
 });
 
 Donation.add({
-  title: { type: String, required: true, default: 'Equipment', initial: true },
-  donationAmount: {
-    type: Types.Select,
-    options: [5, 10, 20, 50, 100, 300, 500, 1000],
-  },
-  image: { type: Types.CloudinaryImage },
-  message: { type: Types.Textarea, height: 150 },
-  createdAt: { type: Date, default: Date.now },
+  key: { type: Types.Key, noedit: true },
+  payerId: { type: Types.Key, noedit: true },
+  source: { type: Types.Select, options: ['paypal'], default: 'paypal' },
+  name: { type: Types.Name },
+  email: { type: Types.Email },
+  donationAmount: { type: Number, required: true, initial: true  },
+  paymentCompleted: { type: Boolean, default: false, noedit: true},
+  published: { type: Boolean, default: false },  
+  donatedAt: { type: Date, required: false, noedit: true },
+  createdAt: { type: Date, default: Date.now, noedit: true },
 });
+
+// Automatically set the date of donation when payment has been processsed
+Donation.schema.methods.isPaymentCompleted = function() {
+console.log('isPaylmentcompleted: ', this.state, this)
+  return this.state == true;
+};
+
+Donation.schema.pre('save', function(next) {
+  if (
+    this.isModified('paymentCompleted') &&
+    this.isPaymentCompleted() &&
+    !this.donatedAt
+  ) {
+    this.donatedAt = new Date();
+  }
+  next();
+});
+
+Donation.defaultColumns = 'name, email, donationAmount, paymentCompleted, published';
+Donation.register();
 
 // Donation.schema.pre('save', function(next) {
 //   this.wasNew = this.isNew;
@@ -67,3 +86,4 @@ Donation.add({
 Donation.defaultSort = '-createdAt';
 Donation.defaultColumns = 'title, donationAmount|20%, image|20%';
 Donation.register();
+

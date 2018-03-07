@@ -16,13 +16,6 @@ var dateParseFormat = 'DD/MM/YYYY';
 
 SupporterIndividual.add({
   name: { type: Types.Name, required: true },
-  key: { type: Types.Key, noedit: true },
-  email: { type: Types.Email },
-  message: { type: Types.Markdown },
-  donationAmount: { type: Number },
-  paymentCompleted: { type: Boolean },
-  donatedOn: { type: Date },
-  published: { type: Boolean },
 });
 // })
 // SupporterIndividual.defaultColumns = 'name';

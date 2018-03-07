@@ -1,6 +1,6 @@
 var keystone = require('keystone');
-var Donation = keystone.list('DonationOptions');
-var SupporterIndividual = keystone.list('SupporterIndividual');
+var Donation = keystone.list('Donation');
+var DonationOptions = keystone.list('DonationOptions');
 var paymentProcessor = require('../../lib/paypalPaymentProcessor');
 
 exports = module.exports = function(req, res) {
@@ -8,14 +8,10 @@ exports = module.exports = function(req, res) {
   var locals = res.locals;
 
   // Set locals
-  locals.hideDonate = true;
-  locals.donationAmount = Donation.fields.donationAmount.ops;
   locals.formData = req.body || {};
   locals.validationErrors = {};
-  locals.donationReceived = false;
 
-  view.query('donateOptions', keystone.list('DonationOptions').model.find());
-
+  view.query('donateOptions', DonationOptions.model.find());
   /*
      On POST request: User has clicked donate
   
@@ -31,7 +27,7 @@ exports = module.exports = function(req, res) {
     paymentProcessor.createPayment(
       donationAmount,
       function success(paymentId, redirectUrl) {
-        var newSupporter = new SupporterIndividual.model({
+        var newSupporter = new Donation.model({
           key: paymentId,
         });
         var updater = newSupporter.getUpdateHandler(req);
@@ -65,8 +61,11 @@ exports = module.exports = function(req, res) {
 
   /*
     Paypal has redirected back to us and we need to handle either:
-     - success meaning the user has made a payment and we are to execute it
-     - cancel meaning the user has cancelled
+     - success meaning:
+        - the user has made a payment and we receive a paymentId (token)
+        - We execute the payment then update our db
+     - cancel meaning:
+        - the user has cancelled
   */
   view.on('get', function(next) {
     if (req.query.outcome == 'success') {
@@ -74,21 +73,27 @@ exports = module.exports = function(req, res) {
       const paymentId = req.query.paymentId;
 
       keystone
-        .list('SupporterIndividual')
+        .list('Donation')
         .model.findOne({ key: paymentId })
-        .exec(function(err, user) {
-          if (user) {
-            console.log('user found: ' + user.name + ' donation amount: ' + user.donationAmount);
+        .exec(function(err, donationRecord) {
+          if (donationRecord) {
+            console.log(
+                'donationRecord found: ' +
+                donationRecord.name + 
+                ' donation amount: ' +
+                donationRecord.donationAmount
+            );
 
             // finalize payment on paypal
             paymentProcessor.executePayment(
               payerId,
               paymentId,
-              user.donationAmount,
+              donationRecord.donationAmount,
               function success(payment) {
-                user.paymentCompleted = 'true';
+                donationRecord.paymentCompleted = 'true';
+                donationRecord.payerId = payerId;
                 //TODO: add payerId to model
-                user.save(function(err) {
+                donationRecord.save(function(err) {
                   console.log('donator updated...');
                   req.flash('success', 'Payment complete. Thank you for your donation!');
                   next();

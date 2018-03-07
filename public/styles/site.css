@@ -6670,9 +6670,8 @@ h9 {
   height: 100px;
   margin: 20px 10px;
   text-align: center;
-  justify-content: center; }
-  .supporter-company section {
-    margin-top: 5px; }
+  justify-content: center;
+  margin-top: 5px; }
 
 .supporter-individual {
   width: 200px;
